@@ -6,7 +6,7 @@ use url::Url;
 use crate::error::Result;
 use crate::sources::{get_json, SourceCaps, SourceExtractor, SourceType};
 
-const UA: &str = "grok-search-rs/0.1 (https://github.com/Episkey-G/GrokSearch-rs)";
+const UA: &str = "grok-search-rs/0.1 (https://github.com/CrystalEchoJ/GrokSearch-rs)";
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct GithubRaw {
@@ -46,17 +46,10 @@ fn matches_github(url: &Url, segment_kind: &str) -> bool {
     segs.len() == 4 && segs[2] == segment_kind && segs[3].parse::<u64>().is_ok()
 }
 
-/// Page size for any comment list. `/comments` endpoints default to 30 results
-/// per page, which silently drops later comments and prevents the renderer's
-/// "more comments" fold from ever firing. Request `max_comments + 1` so the
-/// renderer can both show `max_comments` and detect there are more. GitHub caps
-/// `per_page` at 100; callers needing more than that would require true page
-/// iteration (out of scope — `source_max_comments` defaults to 30).
 fn per_page(max_comments: usize) -> usize {
     max_comments.saturating_add(1).min(100)
 }
 
-/// Conversation (issue) comments — present on both issues and PRs.
 fn comments_url(owner: &str, repo: &str, number: &str, max_comments: usize) -> String {
     format!(
         "https://api.github.com/repos/{owner}/{repo}/issues/{number}/comments?per_page={}",
@@ -64,8 +57,6 @@ fn comments_url(owner: &str, repo: &str, number: &str, max_comments: usize) -> S
     )
 }
 
-/// Inline PR review comments (code-review threads). Distinct from conversation
-/// comments and often where the actionable discussion lives.
 fn pr_review_comments_url(owner: &str, repo: &str, number: &str, max_comments: usize) -> String {
     format!(
         "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/comments?per_page={}",
@@ -73,7 +64,6 @@ fn pr_review_comments_url(owner: &str, repo: &str, number: &str, max_comments: u
     )
 }
 
-/// PR review summaries (APPROVE / REQUEST_CHANGES / COMMENT bodies).
 fn pr_reviews_url(owner: &str, repo: &str, number: &str, max_comments: usize) -> String {
     format!(
         "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/reviews?per_page={}",
@@ -93,8 +83,6 @@ fn login(v: &serde_json::Value) -> String {
         .to_string()
 }
 
-/// Map a `[...comments...]` array (issue or inline review comments) to
-/// `GithubComment`s. Both shapes expose `user.login`, `body`, `created_at`.
 fn parse_comments(json: &serde_json::Value) -> Vec<GithubComment> {
     json.as_array()
         .map(|arr| {
@@ -109,9 +97,6 @@ fn parse_comments(json: &serde_json::Value) -> Vec<GithubComment> {
         .unwrap_or_default()
 }
 
-/// Map a `[...reviews...]` array to `GithubComment`s, keeping only reviews that
-/// carry a body (an APPROVE with no text adds no evidence). Reviews timestamp
-/// with `submitted_at` rather than `created_at`.
 fn parse_review_bodies(json: &serde_json::Value) -> Vec<GithubComment> {
     json.as_array()
         .map(|arr| {
@@ -158,11 +143,6 @@ pub(crate) async fn fetch(
     };
     let comments_url = comments_url(owner, repo, number, max_comments);
 
-    // For PRs, the conversation thread (`/issues/{n}/comments`) omits inline
-    // code-review comments and review summaries — usually the actionable
-    // feedback. Fetch those two extra endpoints concurrently and merge them.
-    // They are best-effort: a failure degrades to empty rather than failing the
-    // whole specialist (so a PR still renders its body + conversation comments).
     let (main, comments) = if is_pr {
         let review_comments_url = pr_review_comments_url(owner, repo, number, max_comments);
         let reviews_url = pr_reviews_url(owner, repo, number, max_comments);
@@ -185,7 +165,6 @@ pub(crate) async fn fetch(
         if let Ok(json) = reviews_res {
             comments.extend(parse_review_bodies(&json));
         }
-        // ISO-8601 timestamps sort lexicographically = chronologically.
         comments.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         (main, comments)
     } else {
@@ -287,7 +266,6 @@ mod tests {
 
     #[test]
     fn comments_url_requests_one_more_than_cap() {
-        // +1 over max_comments lets render() detect "more comments" and fold.
         let u = comments_url("o", "r", "5", 30);
         assert_eq!(
             u,

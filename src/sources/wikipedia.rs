@@ -7,7 +7,7 @@ use url::Url;
 use crate::error::{GrokSearchError, Result};
 use crate::sources::{get_json, SourceCaps, SourceExtractor, SourceType};
 
-const UA: &str = "grok-search-rs/0.1 (https://github.com/Episkey-G/GrokSearch-rs)";
+const UA: &str = "grok-search-rs/0.1 (https://github.com/CrystalEchoJ/GrokSearch-rs)";
 
 const EXCLUDED_NS: &[&str] = &[
     "Special",
@@ -34,21 +34,12 @@ fn lang_from_host(host: &str) -> &str {
     host.strip_suffix(".wikipedia.org").unwrap_or("en")
 }
 
-/// Whether the `/wiki/<title_param>` suffix names a non-article namespace
-/// (File:, Talk:, Special:, …). The title is percent-decoded first so encoded
-/// colons (`File%3A…`) are still recognized, and the prefix is matched
-/// case-insensitively (MediaWiki namespaces are). Excluded titles are left to
-/// the generic fetch path instead of the article extractor.
 fn is_excluded_namespace(title_param: &str) -> bool {
     let decoded = percent_decode_str(title_param).decode_utf8_lossy();
     let ns = decoded.split(':').next().unwrap_or("");
     EXCLUDED_NS.iter().any(|e| e.eq_ignore_ascii_case(ns))
 }
 
-/// Build the action-API query URL for `title_param` (the raw `/wiki/<...>` path
-/// suffix). The title is percent-decoded then re-encoded as a proper query
-/// value, so titles containing `&`, `=`, `?`, spaces, etc. (e.g. `AT&T`) are not
-/// spliced raw into the query string. Pure (no I/O) so it can be unit-tested.
 fn build_api_url(lang: &str, title_param: &str) -> String {
     let title = percent_decode_str(title_param).decode_utf8_lossy();
     let mut api = Url::parse(&format!("https://{lang}.wikipedia.org/w/api.php"))
@@ -57,16 +48,12 @@ fn build_api_url(lang: &str, title_param: &str) -> String {
         .append_pair("action", "query")
         .append_pair("prop", "extracts")
         .append_pair("explaintext", "true")
-        // NB: `exintro` is a MediaWiki boolean — present means true regardless of
-        // value, so it is OMITTED here to fetch the full article, not the lead.
         .append_pair("titles", &title)
         .append_pair("format", "json")
         .append_pair("redirects", "1");
     api.into()
 }
 
-/// D-05: full article body (no `exintro`, which would limit to the lead) as
-/// clean plaintext (`explaintext=true` strips HTML/nav server-side).
 pub(crate) async fn fetch(client: &Client, url: &Url) -> Result<WikiRaw> {
     let host = url.host_str().unwrap_or("");
     let lang = lang_from_host(host).to_string();
@@ -77,8 +64,6 @@ pub(crate) async fn fetch(client: &Client, url: &Url) -> Result<WikiRaw> {
     parse_page(&json, &lang)
 }
 
-/// Parse the Wikipedia action-API `query.pages` response into a WikiRaw.
-/// Pure (no I/O) so it can be unit-tested offline against a fixture.
 pub fn parse_page(json: &serde_json::Value, lang: &str) -> Result<WikiRaw> {
     let pages = json
         .get("query")
@@ -110,8 +95,6 @@ pub fn parse_page(json: &serde_json::Value, lang: &str) -> Result<WikiRaw> {
 }
 
 pub fn render(raw: &WikiRaw, _caps: &SourceCaps) -> String {
-    // explaintext=true already produced clean plaintext; max_chars truncation
-    // is applied later by service.rs web_fetch.
     format!("# {}\n\n{}\n", raw.title, raw.extract)
 }
 
@@ -147,7 +130,6 @@ mod tests {
 
     #[test]
     fn build_api_url_encodes_query_delimiters_in_title() {
-        // A raw `&` in the title must not split into a separate query param.
         let u = build_api_url("en", "AT&T");
         assert!(u.contains("titles=AT%26T"), "got: {u}");
         assert!(!u.contains("titles=AT&T"), "raw ampersand leaked: {u}");
@@ -155,7 +137,6 @@ mod tests {
 
     #[test]
     fn build_api_url_does_not_double_encode_preencoded_title() {
-        // Already percent-encoded path slice decodes once, re-encodes once.
         let u = build_api_url("en", "AT%26T");
         assert!(u.contains("titles=AT%26T"), "got: {u}");
         assert!(!u.contains("AT%2526T"), "double-encoded: {u}");
@@ -163,8 +144,6 @@ mod tests {
 
     #[test]
     fn build_api_url_requests_full_article_not_intro() {
-        // exintro is a MediaWiki boolean: present => true. To get the full body
-        // it must be omitted entirely, not set to "false".
         let u = build_api_url("en", "Rust");
         assert!(!u.contains("exintro"), "exintro must be omitted: {u}");
         assert!(u.contains("explaintext=true"), "got: {u}");
@@ -172,10 +151,8 @@ mod tests {
 
     #[test]
     fn excluded_namespace_decodes_encoded_colon() {
-        // %3A is the encoded colon; the namespace check must see it.
         assert!(is_excluded_namespace("File%3AExample.jpg"));
         assert!(is_excluded_namespace("Special%3ARandom"));
-        // Raw colon still excluded.
         assert!(is_excluded_namespace("Talk:Rust"));
     }
 
