@@ -90,14 +90,7 @@ The npm package ships a native Rust binary; the `grok-search-rs` command is what
 
    Put your real keys in the empty values. If your client expects a top-level `mcpServers` / `mcp_servers` object, place the `grok-search-rs` entry under that section.
 
-2. Optional: scaffold a shared global config file instead of duplicating env blocks in every MCP client:
-
-   ```bash
-   grok-search-rs --init
-   $EDITOR ~/.config/grok-search-rs/config.toml
-   ```
-
-3. Verify:
+2. Verify:
 
    ```text
    Ask your assistant: "call doctor"
@@ -196,19 +189,9 @@ for the generic fallback path.
 1. If `GROK_SEARCH_AUTH_MODE=oauth` → **Responses** transport with the local OAuth token.
 2. Else if `GROK_SEARCH_API_KEY` is set → **Responses** transport with a static Bearer key.
 3. Else if both `OPENAI_COMPATIBLE_API_URL` and `OPENAI_COMPATIBLE_API_KEY` are set → **ChatCompletions** transport.
-4. Else → server fails with a clear `MissingConfig` error.
+4. Else → defaults to **Responses** transport (will show a setup guide when run interactively).
 
-### Global config file
-
-Tired of duplicating `env` blocks across clients? Run `grok-search-rs --init` once to scaffold `<home>/.config/grok-search-rs/config.toml`, fill in your keys, and every client can shrink to `{"command": "grok-search-rs"}`.
-
-| Path order | Location |
-|---|---|
-| 1 | `$GROK_SEARCH_CONFIG` (explicit override, any platform) |
-| 2 | `$HOME/.config/grok-search-rs/config.toml` (Unix / macOS / Git Bash) |
-| 3 | `%USERPROFILE%\.config\grok-search-rs\config.toml` (native Windows) |
-
-**Precedence**: per‑client `env` **>** config file **>** built‑in defaults. File keys are lowercase `snake_case` (env `GROK_SEARCH_MODEL` → file `grok_model`). Unknown keys are rejected. Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+All configuration lives in `.mcp.json`'s `env` block. Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ---
 

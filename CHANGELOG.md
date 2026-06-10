@@ -4,6 +4,23 @@ All notable changes to GrokSearch-rs are documented here.
 
 ## Unreleased
 
+### Removed (BREAKING)
+
+- **TOML config file support removed**. The global `~/.config/grok-search-rs/config.toml` and `GROK_SEARCH_CONFIG` env var are no longer supported. All configuration now lives exclusively in `.mcp.json`'s `env` block.
+- **`--init` command removed**. Use `.mcp.json` directly instead of scaffolding a TOML template.
+- Removed public API: `Config::from_env()`, `config::config_path()`, `config::config_path_for()`, `config::write_template()`, `InitOutcome`, `CONFIG_TEMPLATE`.
+
+### Changed
+
+- `Config::load()` now reads only process environment variables (no file merge).
+- `Config::load_from()` now uses the provided env map directly (no file resolution).
+- Auth path resolution preserves `~/.config/grok-search-rs/auth.json` for OAuth token storage.
+- `.mcp.json` updated with all available env vars as a self-documenting reference.
+
+### Migration
+
+If you used `~/.config/grok-search-rs/config.toml`, copy your settings into `.mcp.json`'s `env` block using the corresponding env var names (see `docs/CONFIGURATION.md` for the full mapping).
+
 ## 0.1.15 - 2026-06-08
 
 ### Changed
