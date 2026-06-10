@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "grok-search-rs": {
+      "command": "grok-search-rs",
+      "args": [],
+      "env": {
+        "GROK_SEARCH_API_KEY": "${GROK_SEARCH_API_KEY}",
+        "GROK_SEARCH_MODEL": "grok-4.20-fast",
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}",
+        "TAVILY_API_URL": "https://api.tavily.com",
+        "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
+      }
+    }
+  }
+}

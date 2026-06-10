@@ -1,0 +1,19 @@
+{
+  "name": "grok-search-marketplace",
+  "description": "Marketplace for GrokSearch-rs — AI web search via Grok/xAI, Tavily, and Firecrawl.",
+  "owner": {
+    "name": "CrystalEchoJ",
+    "url": "https://github.com/CrystalEchoJ"
+  },
+  "plugins": [
+    {
+      "name": "grok-search-rs",
+      "source": "./",
+      "description": "AI-powered web search with cited sources. Connects to Grok/xAI or any OpenAI-compatible API via stdio MCP, with Tavily/Firecrawl source retrieval and specialist extractors for GitHub, StackExchange, arXiv, and Wikipedia.",
+      "category": "development",
+      "tags": ["search", "web-search", "grok", "tavily", "firecrawl"],
+      "keywords": ["search", "web", "grok", "xai", "tavily", "firecrawl", "internet", "research", "mcp"],
+      "homepage": "https://github.com/CrystalEchoJ/GrokSearch-rs"
+    }
+  ]
+}

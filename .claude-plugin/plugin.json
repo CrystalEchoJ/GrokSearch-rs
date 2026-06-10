@@ -1,0 +1,15 @@
+{
+  "name": "grok-search-rs",
+  "version": "0.1.15",
+  "description": "AI-powered web search with cited sources via stdio MCP. Connects to Grok/xAI or any OpenAI-compatible API, with Tavily/Firecrawl source retrieval and specialist extractors for GitHub, StackExchange, arXiv, and Wikipedia.",
+  "author": {
+    "name": "CrystalEchoJ",
+    "url": "https://github.com/CrystalEchoJ"
+  },
+  "homepage": "https://github.com/CrystalEchoJ/GrokSearch-rs",
+  "repository": "https://github.com/CrystalEchoJ/GrokSearch-rs",
+  "license": "MIT",
+  "keywords": ["search", "grok", "xai", "tavily", "firecrawl", "mcp", "web-search", "internet"],
+  "commands": ["./commands"],
+  "mcpServers": "./.mcp.json"
+}
