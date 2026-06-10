@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bump grok-search-rs version across Cargo.toml, Cargo.lock,
-# and all npm package.json files (main + platform sub-packages).
+# .claude-plugin/plugin.json, and all npm package.json files.
 #
 # Usage:
 #   scripts/bump-version.sh 0.1.5            # bump only
@@ -58,6 +58,17 @@ if n != 1:
 p.write_text(new_text)
 PY
 
+echo "==> Updating .claude-plugin/plugin.json -> $VERSION"
+python3 - "$VERSION" <<'PY'
+import pathlib, json, sys
+v = sys.argv[1]
+p = pathlib.Path(".claude-plugin/plugin.json")
+data = json.loads(p.read_text())
+data["version"] = v
+p.write_text(json.dumps(data, indent=2) + "\n")
+print(f"   .claude-plugin/plugin.json -> {v}")
+PY
+
 echo "==> Refreshing Cargo.lock"
 cargo update -p grok-search-rs
 
@@ -100,7 +111,7 @@ if [[ "$MODE" == "bump" ]]; then
 fi
 
 echo "==> Committing"
-git add Cargo.toml Cargo.lock npm/grok-search-rs/package.json npm/platforms/*/package.json
+git add Cargo.toml Cargo.lock .claude-plugin/plugin.json npm/grok-search-rs/package.json npm/platforms/*/package.json
 git commit -m "Release grok-search-rs $VERSION"
 git tag -a "v$VERSION" -m "v$VERSION"
 
