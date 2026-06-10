@@ -6,17 +6,8 @@ use url::Url;
 use crate::error::{GrokSearchError, Result};
 use crate::sources::{get_json, SourceCaps, SourceExtractor, SourceType};
 
-const UA: &str = "grok-search-rs/0.1 (https://github.com/Episkey-G/GrokSearch-rs)";
+const UA: &str = "grok-search-rs/0.1 (https://github.com/CrystalEchoJ/GrokSearch-rs)";
 
-/// StackExchange API filter that adds `question.body_markdown` /
-/// `answer.body_markdown` on top of the `withbody` base. Without it the API only
-/// returns the rendered HTML `body` field, so `field_str(.., "body_markdown",
-/// "body")` always fell through to HTML — defeating the Markdown extraction.
-///
-/// Filter strings are deterministic (same `base` + `include` set always yields
-/// this exact value) and do not expire. Regenerate with:
-///   GET https://api.stackexchange.com/2.3/filters/create
-///       ?base=withbody&include=question.body_markdown;answer.body_markdown&unsafe=false
 const SE_FILTER: &str = "!X-cWn5YrCQCchzB5B4*yqi6eO0BYWbSmsTE.VZm";
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -44,15 +35,12 @@ pub struct SeRaw {
 
 pub struct StackExchangeExtractor;
 
-/// api_site_parameter for a non-meta host.
 fn base_site_param(host: &str) -> String {
     match host {
         "stackoverflow.com" => "stackoverflow".to_string(),
         "serverfault.com" => "serverfault".to_string(),
         "superuser.com" => "superuser".to_string(),
         "askubuntu.com" => "askubuntu".to_string(),
-        // MathOverflow is the exception: its api_site_parameter is the full
-        // domain, not a stripped subdomain.
         "mathoverflow.net" => "mathoverflow.net".to_string(),
         other => other
             .strip_suffix(".stackexchange.com")
@@ -62,10 +50,6 @@ fn base_site_param(host: &str) -> String {
 }
 
 fn site_from_host(host: &str) -> String {
-    // Meta hosts (central `meta.stackexchange.com` and per-site
-    // `meta.stackoverflow.com`, `meta.serverfault.com`, …) map to the
-    // `meta.<base>` api_site_parameter — naive suffix stripping would yield a
-    // bare `meta` and break the API call.
     if let Some(base) = host.strip_prefix("meta.") {
         if base == "stackexchange.com" {
             return "meta.stackexchange".to_string();
@@ -91,22 +75,14 @@ fn is_se_host(host: &str) -> bool {
     ) || host.ends_with(".stackexchange.com")
 }
 
-/// StackExchange answers page size. Defaults to 30/page; request
-/// `max_answers + 1` (capped at the API's 100) so `render` sees every answer
-/// within the cap and can emit its "more answers" marker. Mirrors the GitHub
-/// comments paging approach.
 fn answers_pagesize(max_answers: usize) -> usize {
     max_answers.saturating_add(1).min(100)
 }
 
-/// Question endpoint URL. Carries [`SE_FILTER`] so the response includes
-/// `body_markdown` (not just the HTML `body`). Pure (no I/O) so it is unit-tested.
 fn question_url(id: &str, site: &str) -> String {
     format!("https://api.stackexchange.com/2.3/questions/{id}?site={site}&filter={SE_FILTER}")
 }
 
-/// Answers endpoint URL: vote-sorted, [`SE_FILTER`] for `body_markdown`, paged to
-/// `answers_pagesize`. Pure (no I/O) so it is unit-tested.
 fn answers_url(id: &str, site: &str, max_answers: usize) -> String {
     format!(
         "https://api.stackexchange.com/2.3/questions/{id}/answers?site={site}&filter={SE_FILTER}&order=desc&sort=votes&pagesize={}",
@@ -114,12 +90,6 @@ fn answers_url(id: &str, site: &str, max_answers: usize) -> String {
     )
 }
 
-/// Decode the small set of HTML entities StackExchange emits inside
-/// `body_markdown`, titles, and display names (`&lt; &gt; &amp; &quot; &apos;`
-/// plus numeric `&#NN;` / `&#xHH;`). SE stores Markdown source with these
-/// encoded, so `c &lt; arraySize` and `Poincar&#233;` would otherwise leak into
-/// the rendered output. Unknown entities (e.g. `&nbsp;`) and bare `&` are left
-/// verbatim so real text is never corrupted. Pure — unit-tested offline.
 fn decode_entities(s: &str) -> String {
     if !s.contains('&') {
         return s.to_string();
@@ -152,7 +122,6 @@ fn decode_entities(s: &str) -> String {
                 out.push(c);
                 rest = &tail[semi + 1..];
             }
-            // Not a recognized entity: keep the '&' literal, advance past it.
             None => {
                 out.push('&');
                 rest = &tail[1..];
@@ -181,8 +150,6 @@ fn owner_name(v: &serde_json::Value) -> String {
     decode_entities(raw)
 }
 
-/// Map an `/answers` (or embedded `answers`) JSON payload into `SeAnswer`s.
-/// Tolerant of missing fields so a partial response still yields usable bodies.
 fn parse_answers(json: &serde_json::Value) -> Vec<SeAnswer> {
     json.get("items")
         .and_then(|v| v.as_array())
@@ -224,18 +191,6 @@ pub(crate) async fn fetch(client: &Client, url: &Url, max_answers: usize) -> Res
     let id = segs.get(1).copied().unwrap_or_default();
     let headers = [(USER_AGENT, UA)];
 
-    // The question (`/questions/{id}`) returns the QUESTION body but never the
-    // answers array; answers come from the dedicated, vote-sorted endpoint. The
-    // answers URL depends only on `id`/`site` (from the URL), not on the question
-    // response, so the two GETs have no data dependency and run concurrently —
-    // halving the round-trip latency (mirrors the GitHub PR `tokio::join!` path).
-    //
-    // The question is mandatory (`?`); the answers call is best-effort: a
-    // failed/rate-limited answers fetch still returns the question rather than
-    // failing the whole specialist. NOTE: per-answer comments still need a custom
-    // SE filter (via /filters/create) and remain out of scope; the renderer
-    // degrades gracefully when comment lists are empty. Anonymous calls are
-    // rate-limited (~300/day); a future key could lift that.
     let q_url = question_url(id, &site);
     let a_url = answers_url(id, &site, max_answers);
     let (q_res, a_res) = tokio::join!(
@@ -329,8 +284,6 @@ mod tests {
 
     #[test]
     fn site_from_host_preserves_meta_stackexchange() {
-        // Meta Stack Exchange's api_site_parameter is "meta.stackexchange",
-        // not "meta" — stripping the suffix would break the specialist path.
         assert_eq!(
             site_from_host("meta.stackexchange.com"),
             "meta.stackexchange"
@@ -345,13 +298,11 @@ mod tests {
 
     #[test]
     fn site_from_host_keeps_mathoverflow_full_domain() {
-        // MathOverflow's api_site_parameter is the full domain "mathoverflow.net".
         assert_eq!(site_from_host("mathoverflow.net"), "mathoverflow.net");
     }
 
     #[test]
     fn site_from_host_maps_per_site_meta_hosts() {
-        // Per-site metas use api_site_parameter "meta.<base>".
         assert_eq!(
             site_from_host("meta.stackoverflow.com"),
             "meta.stackoverflow"
@@ -383,14 +334,6 @@ mod tests {
         assert_eq!(answers_pagesize(250), 100);
     }
 
-    // Regression: SE web_fetch rendered raw HTML instead of Markdown
-    // Found by /qa on 2026-06-04
-    // Report: .gstack/qa-reports/qa-report-stackexchange-2026-06-04.md
-    //
-    // Root cause was `filter=withbody`, which only returns the HTML `body`
-    // field, so the `body_markdown`-preferring parser always fell through to
-    // HTML. Both endpoint URLs must carry SE_FILTER (which adds body_markdown)
-    // and must NOT request the bare `withbody` filter.
     #[test]
     fn question_url_requests_markdown_filter_not_withbody() {
         let u = question_url("11227809", "stackoverflow");
@@ -413,8 +356,6 @@ mod tests {
         assert_eq!(field_str(&v, "body_markdown", "body"), "*md*");
     }
 
-    // ISSUE-002: SE body_markdown is entity-encoded; field_str must decode it so
-    // code blocks and prose render correctly.
     #[test]
     fn field_str_decodes_html_entities_in_body_markdown() {
         let v = serde_json::json!({ "body_markdown": "for (c = 0; c &lt; n; ++c) &quot;x&#39;y&quot;" });
@@ -433,8 +374,6 @@ mod tests {
 
     #[test]
     fn decode_entities_leaves_unknown_and_bare_ampersand_intact() {
-        // Unknown named entity and a bare ampersand must survive unchanged so
-        // real text (e.g. "R&D", "&nbsp;") is never corrupted.
         assert_eq!(decode_entities("R&D and Q&A"), "R&D and Q&A");
         assert_eq!(decode_entities("a &nbsp; b"), "a &nbsp; b");
         assert_eq!(decode_entities("no entities here"), "no entities here");
