@@ -21,7 +21,7 @@ Start by explaining what this setup will do:
 > "I'll walk you through setting up GrokSearch-rs. Here's what we'll do:
 > 1. Verify the `grok-search-rs` binary is installed
 > 2. Help you configure your API keys (Grok/xAI, Tavily, Firecrawl)
-> 3. Scaffold a global config file so any MCP client can use the same keys
+> 3. Verify the environment is ready
 > 4. Run a connectivity check to confirm everything works"
 
 ### Step 2: Check Binary
@@ -64,47 +64,50 @@ If the user asks you to install it for them, run the npm or cargo command (which
 
 Explain the key requirements:
 
-> "GrokSearch-rs needs API keys to work. You can configure them in two ways:
+> "GrokSearch-rs reads all configuration from environment variables. The easiest way is to add them to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
 >
-> **Option A — Global config file (recommended):**
-> Run `grok-search-rs --init` and edit the resulting file. I'll help with that in a moment.
+> **Required keys:**
 >
-> **Option B — Environment variables:**
-> Set them in your shell profile or MCP client config.
+> | Key | Where to get it |
+> |-----|----------------|
+> | `GROK_SEARCH_API_KEY` | https://x.ai/api |
+> | `TAVILY_API_KEY` | https://tavily.com |
 >
-> Here are the keys you need:
+> **Optional keys:**
 >
-> | Key | Required? | Where to get it |
-> |-----|-----------|----------------|
-> | `GROK_SEARCH_API_KEY` | **Yes** (or use OAuth) | https://x.ai/api |
-> | `TAVILY_API_KEY` | Recommended | https://tavily.com |
-> | `FIRECRAWL_API_KEY` | Optional (fallback) | https://firecrawl.dev |
-> | `GITHUB_TOKEN` | Optional (higher rate limits) | https://github.com/settings/tokens |
+> | Key | Purpose |
+> |-----|---------|
+> | `FIRECRAWL_API_KEY` | Fallback when Tavily fails |
+> | `GITHUB_TOKEN` | Higher GitHub API rate limits |
 >
-> **OAuth alternative to API key:**
-> If you prefer not to manage a static API key, you can use:
+> Add them to your shell profile:
+> ```bash
+> echo 'export GROK_SEARCH_API_KEY="xai-..."' >> ~/.bashrc
+> echo 'export TAVILY_API_KEY="tvly-..."' >> ~/.bashrc
+> source ~/.bashrc
+> ```
+>
+> The plugin's `.mcp.json` already has sensible defaults for all other settings (model, URLs, timeouts, etc.). The full list is in the `.mcp.json` file — you can see it at `${CLAUDE_PLUGIN_ROOT}/.mcp.json`.
+>
+> **OAuth alternative:**
+> If you prefer not to manage a static API key:
 > ```
 > grok-search-rs login
 > ```
-> Then set `GROK_SEARCH_AUTH_MODE=oauth` in your config. Note: OAuth mode reuses Hermes' xAI OAuth client and may carry account/terms risk."
+> Then set `GROK_SEARCH_AUTH_MODE=oauth` instead of `GROK_SEARCH_API_KEY`.
 
-### Step 4: Scaffold Config
+### Step 4: Verify Config
 
-Run `grok-search-rs --init`. If the file already exists, say so and ask if they want to see its current contents. If it was just created, show the path and offer to open it.
+Check that the env vars are visible to the current shell:
 
-If the user wants to edit the config file now, read it and help them fill in their keys. The config file uses `snake_case` keys (not the `SCREAMING_SNAKE_CASE` of env vars):
+```bash
+echo "GROK_SEARCH_API_KEY is ${GROK_SEARCH_API_KEY:+set} ${GROK_SEARCH_API_KEY:-unset}"
+echo "TAVILY_API_KEY is ${TAVILY_API_KEY:+set} ${TAVILY_API_KEY:-unset}"
+```
 
-| File key | Env var equivalent |
-|----------|-------------------|
-| `grok_api_key` | `GROK_SEARCH_API_KEY` |
-| `grok_model` | `GROK_SEARCH_MODEL` |
-| `tavily_api_key` | `TAVILY_API_KEY` |
-| `tavily_api_url` | `TAVILY_API_URL` |
-| `firecrawl_api_key` | `FIRECRAWL_API_KEY` |
-| `firecrawl_api_url` | `FIRECRAWL_API_URL` |
-| `github_token` | `GITHUB_TOKEN` |
+If any required key is missing, go back to Step 3.
 
-Help the user uncomment and fill in the keys they have. Don't ask them to paste keys into the chat — ask them to edit the file directly and tell you when they're done.
+> **Note:** There's also a global config file option (`grok-search-rs --init` → `~/.config/grok-search-rs/config.toml`) for users who use multiple MCP clients and don't want to duplicate env vars. For Claude Code plugin users, shell environment variables are simpler — one place, works everywhere.
 
 ### Step 5: Verify
 
@@ -128,6 +131,6 @@ Summarize what was configured:
 > - **Search the web**: Just ask me to search for something — I'll use `web_search` automatically
 > - **Fetch a specific page**: Ask me to fetch a URL — I'll use `web_fetch` with the best extractor
 > - **Health check**: Run `/grok-search-rs:doctor` anytime
-> - **Reconfigure**: Edit `~/.config/grok-search-rs/config.toml` and restart
+> - **Reconfigure**: Edit env vars in `~/.bashrc` and restart the shell, or set new values in your MCP client config (env takes priority over defaults)
 >
 > If you're switching between transports (Responses ↔ ChatCompletions), see the [Configuration docs](https://github.com/CrystalEchoJ/GrokSearch-rs#configuration)."
