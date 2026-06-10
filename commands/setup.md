@@ -64,7 +64,7 @@ If the user asks you to install it for them, run the npm or cargo command (which
 
 Explain the key requirements:
 
-> "GrokSearch-rs reads all configuration from environment variables. The easiest way is to add them to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
+> "GrokSearch-rs reads all configuration from the `.mcp.json` file's `env` block. Edit it directly to set your keys and tweak settings.
 >
 > **Required keys:**
 >
@@ -80,21 +80,14 @@ Explain the key requirements:
 > | `FIRECRAWL_API_KEY` | Fallback when Tavily fails |
 > | `GITHUB_TOKEN` | Higher GitHub API rate limits |
 >
-> Add them to your shell profile:
-> ```bash
-> echo 'export GROK_SEARCH_API_KEY="xai-..."' >> ~/.bashrc
-> echo 'export TAVILY_API_KEY="tvly-..."' >> ~/.bashrc
-> source ~/.bashrc
-> ```
->
-> The plugin's `.mcp.json` already has sensible defaults for all other settings (model, URLs, timeouts, etc.). The full list is in the `.mcp.json` file — you can see it at `${CLAUDE_PLUGIN_ROOT}/.mcp.json`.
+> The `.mcp.json` file already has sensible defaults for all other settings (model, URLs, timeouts, etc.). Open `${CLAUDE_PLUGIN_ROOT}/.mcp.json` to see the full list and customize.
 >
 > **OAuth alternative:**
 > If you prefer not to manage a static API key:
 > ```
 > grok-search-rs login
 > ```
-> Then set `GROK_SEARCH_AUTH_MODE=oauth` instead of `GROK_SEARCH_API_KEY`.
+> Then set `GROK_SEARCH_AUTH_MODE=oauth` in `.mcp.json` instead of `GROK_SEARCH_API_KEY`.
 
 ### Step 4: Verify Config
 
@@ -107,7 +100,7 @@ echo "TAVILY_API_KEY is ${TAVILY_API_KEY:+set} ${TAVILY_API_KEY:-unset}"
 
 If any required key is missing, go back to Step 3.
 
-> **Note:** There's also a global config file option (`grok-search-rs --init` → `~/.config/grok-search-rs/config.toml`) for users who use multiple MCP clients and don't want to duplicate env vars. For Claude Code plugin users, shell environment variables are simpler — one place, works everywhere.
+> **Note:** For users who use multiple MCP clients, copy the `env` block from `.mcp.json` into each client's MCP server config. The binary always reads env vars the same way regardless of which client launched it.
 
 ### Step 5: Verify
 
@@ -131,6 +124,6 @@ Summarize what was configured:
 > - **Search the web**: Just ask me to search for something — I'll use `web_search` automatically
 > - **Fetch a specific page**: Ask me to fetch a URL — I'll use `web_fetch` with the best extractor
 > - **Health check**: Run `/grok-search-rs:doctor` anytime
-> - **Reconfigure**: Edit env vars in `~/.bashrc` and restart the shell, or set new values in your MCP client config (env takes priority over defaults)
+> - **Reconfigure**: Edit the `env` block in `.mcp.json` and restart your MCP client
 >
 > If you're switching between transports (Responses ↔ ChatCompletions), see the [Configuration docs](https://github.com/CrystalEchoJ/GrokSearch-rs#configuration)."

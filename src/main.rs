@@ -1,10 +1,10 @@
 use std::io::{IsTerminal, Write};
 
-use grok_search_rs::config::{self, AuthMode, Config, InitOutcome};
+use grok_search_rs::config::{self, AuthMode, Config};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    // CLI shim: handle --version, --init before MCP server mode.
+    // CLI shim: handle --version before MCP server mode.
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     if args
@@ -13,10 +13,6 @@ async fn main() -> anyhow::Result<()> {
     {
         println!("grok-search-rs {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
-    }
-
-    if args.iter().any(|a| a == "init" || a == "--init") {
-        return run_init();
     }
 
     if args.first().map(String::as_str) == Some("login") {
@@ -112,33 +108,13 @@ fn resolve_auth_path(cfg: &Config) -> anyhow::Result<std::path::PathBuf> {
         .ok_or_else(|| anyhow::anyhow!("cannot resolve OAuth auth path; set GROK_SEARCH_AUTH_FILE"))
 }
 
-/// Scaffold the global config file. Idempotent: existing files are reported
-/// and left untouched. Prints the resolved path so the user can `$EDITOR` it.
-fn run_init() -> anyhow::Result<()> {
-    let path = config::config_path().ok_or_else(|| {
-        anyhow::anyhow!(
-            "cannot resolve config path: set GROK_SEARCH_CONFIG to an explicit file path, \
-             or ensure HOME (Unix / Git Bash) or USERPROFILE (Windows) is set"
-        )
-    })?;
-    match config::write_template(&path)? {
-        InitOutcome::Created => {
-            println!("✓ wrote template: {}", path.display());
-            println!("  edit it and uncomment the keys you need.");
-        }
-        InitOutcome::AlreadyExists => {
-            println!("• config already exists: {}", path.display());
-            println!("  not overwriting. delete the file first if you want a fresh template.");
-        }
-    }
-    Ok(())
-}
-
 fn print_setup_guide() {
-    let mut guide = String::from(
-        r#"grok-search-rs is an MCP server. It speaks JSON-RPC over stdio and
+    let guide = r#"grok-search-rs is an MCP server. It speaks JSON-RPC over stdio and
 should be launched by an MCP client (Claude Code, Codex CLI, Gemini CLI,
 Cursor, VS Code, Windsurf, ...), not run directly.
+
+All configuration lives in the .mcp.json file's env block. Edit it to set
+your keys and preferences — no other config files or shell env vars needed.
 
 Required keys
   GROK_SEARCH_API_KEY   xAI / Grok-compatible key   (https://x.ai/api)
@@ -147,7 +123,7 @@ Required keys
 
 OAuth alternative
   grok-search-rs login
-  Set GROK_SEARCH_AUTH_MODE=oauth in your MCP env or config.
+  Set GROK_SEARCH_AUTH_MODE=oauth in .mcp.json.
   OAuth mode reuses Hermes' xAI client_id and may carry account / terms risk.
 
 One-line install (Claude Code)
@@ -160,30 +136,9 @@ One-line install (Claude Code)
     }
   }'
 
-"#,
-    );
-
-    // Hint the global config path only when the file is genuinely missing —
-    // avoids nagging users who have already set one up.
-    if let Some(path) = config::config_path() {
-        if !path.exists() {
-            guide.push_str(&format!(
-                r#"Tip: set keys once for every MCP client
-  grok-search-rs --init                  # scaffold {}
-  $EDITOR {}    # uncomment and fill
-
-"#,
-                path.display(),
-                path.display()
-            ));
-        }
-    }
-
-    guide.push_str(
-        r#"Docs:    https://github.com/CrystalEchoJ/GrokSearch-rs#readme
+Docs:    https://github.com/CrystalEchoJ/GrokSearch-rs#readme
 Issues:  https://github.com/CrystalEchoJ/GrokSearch-rs/issues
-"#,
-    );
+"#;
 
     let stdout = std::io::stdout();
     let _ = stdout.lock().write_all(guide.as_bytes());

@@ -46,7 +46,6 @@ Tavily         ✅ / ❌      ...
 Firecrawl      ✅ / ⚠️      ...
 
 GitHub token:  set / unset
-Config file:   (from redacted diagnostics, note the path)
 ```
 
 If any backend is unreachable, suggest common fixes:

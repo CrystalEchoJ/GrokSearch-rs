@@ -1,12 +1,8 @@
 # Configuration
 
-GrokSearch-rs reads configuration from two sources, merged with the following precedence:
+All configuration lives in the `.mcp.json` file's `env` block. The MCP client reads this file at startup, passes the env vars to the binary, and the binary uses built-in defaults for any unset keys.
 
-1. **Process environment variables** (highest — what your MCP client passes in `env`).
-2. **Global TOML config file** — `$GROK_SEARCH_CONFIG` if set, otherwise `<home>/.config/grok-search-rs/config.toml` on every platform. `<home>` is `$HOME` on Unix / Git Bash, `%USERPROFILE%` on native Windows shells (PowerShell, cmd).
-3. **Built-in defaults** (lowest).
-
-The config file is optional; missing files are skipped silently. See the [Config file](#config-file) section below for the TOML schema. The AI provider contract is intentionally narrow: configure a Grok/OpenAI-compatible root URL and the server calls `/v1/responses`.
+There are no other config files. No TOML, no `.env`, no shell profile env vars needed. Everything is in one place: `.mcp.json`.
 
 ## Grok Responses
 
@@ -22,17 +18,6 @@ The config file is optional; missing files are skipped silently. See the [Config
 
 Boolean values accept `1`, `true`, or `yes` as enabled. Any other value is treated as disabled.
 
-Example:
-
-```bash
-GROK_SEARCH_API_KEY=...
-GROK_SEARCH_URL=https://api.modelverse.cn
-GROK_SEARCH_MODEL=grok-4-1-fast-reasoning
-GROK_SEARCH_X_SEARCH=false
-```
-
-The example above calls `https://api.modelverse.cn/v1/responses`.
-
 ### OAuth mode
 
 OAuth mode keeps the normal Responses payload and only changes where the Bearer token comes from. The binary handles login and MCP stdio; it does not start a background HTTP proxy.
@@ -47,17 +32,32 @@ grok-search-rs logout
 
 OAuth mode reuses Hermes' xAI OAuth client id. This may violate xAI terms or create account risk, and Windows stores the token as a normal local file. Do not share the token file.
 
-Minimal Codex config:
+Minimal `.mcp.json` config for OAuth:
 
-```toml
-[mcp_servers.grok-search-rs]
-command = "grok-search-rs"
-
-[mcp_servers.grok-search-rs.env]
-GROK_SEARCH_AUTH_MODE = "oauth"
-GROK_SEARCH_MODEL = "grok-4.3"
-GROK_SEARCH_WEB_SEARCH = "true"
+```json
+{
+  "mcpServers": {
+    "grok-search-rs": {
+      "command": "grok-search-rs",
+      "env": {
+        "GROK_SEARCH_AUTH_MODE": "oauth",
+        "GROK_SEARCH_MODEL": "grok-4.3",
+        "GROK_SEARCH_WEB_SEARCH": "true"
+      }
+    }
+  }
+}
 ```
+
+## OpenAI-compatible transport
+
+When `GROK_SEARCH_API_KEY` is unset and these three are set, the service talks to `/v1/chat/completions` instead of `/v1/responses`. Useful for OpenAI-compatible gateways that do not implement `/responses`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_COMPATIBLE_API_URL` | unset | Base URL for the chat-completions gateway. |
+| `OPENAI_COMPATIBLE_API_KEY` | unset | Bearer token for the gateway. |
+| `OPENAI_COMPATIBLE_MODEL` | unset | Model name sent in the chat-completions payload. |
 
 ## Tavily
 
@@ -98,93 +98,3 @@ Tavily/Firecrawl key required.
 | `GROK_SEARCH_SOURCE_MAX_COMMENTS` | `30` | GitHub / StackExchange comments rendered before folding. |
 | `GROK_SEARCH_ENRICH_CONCURRENCY` | `3` | Parallel source enrichments when `web_search` is called with `include_content: true`. Clamped to `1..=5`. |
 | `GROK_SEARCH_ENRICH_MAX_CHARS` | `15000` | Character cap per enriched source body. |
-
-## Config file
-
-Drop a TOML file at `<home>/.config/grok-search-rs/config.toml` (or any path pointed to by `GROK_SEARCH_CONFIG`) to set defaults once and skip the per-client `env` block. Process env still wins, so individual clients can override any field at runtime.
-
-Resolved per platform:
-
-- **macOS / Linux**: `$HOME/.config/grok-search-rs/config.toml` — e.g. `/Users/alice/.config/grok-search-rs/config.toml`.
-- **Windows (PowerShell / cmd)**: `%USERPROFILE%\.config\grok-search-rs\config.toml` — e.g. `C:\Users\chen\.config\grok-search-rs\config.toml`.
-- **Windows (Git Bash / MSYS)**: same as Unix — `$HOME/.config/grok-search-rs/config.toml`.
-
-`grok-search-rs --init` picks the right path automatically; no platform-specific shell setup required.
-
-### Scaffolding the file — `--init`
-
-```bash
-grok-search-rs --init
-```
-
-This writes an annotated template at the resolved config path with **every key commented out**. The scaffold is identical in behavior to "no config file" until you uncomment lines, so it never silently changes runtime behavior. Re-running `--init` is a no-op when the file already exists; delete the file first to regenerate.
-
-### Why two casings?
-
-Env vars use `UPPER_CASE` because that is the Unix shell tradition (`PATH`, `HOME`, `LANG`, `AWS_REGION` …). TOML files use lowercase `snake_case` because that is the Rust ecosystem convention (`Cargo.toml`, `pyproject.toml`, Codex `~/.codex/config.toml`). `grok-search-rs` follows each convention in its native context. Mapping rule for the table below: drop the `GROK_SEARCH_` prefix where present, then lowercase the rest.
-
-Unknown keys are rejected by the loader — typos surface as parse errors instead of silently dropping.
-
-| TOML key | Env equivalent |
-|---|---|
-| `grok_api_url` | `GROK_SEARCH_URL` |
-| `grok_api_key` | `GROK_SEARCH_API_KEY` |
-| `grok_auth_mode` | `GROK_SEARCH_AUTH_MODE` |
-| `grok_auth_file` | `GROK_SEARCH_AUTH_FILE` |
-| `grok_model` | `GROK_SEARCH_MODEL` |
-| `web_search_enabled` | `GROK_SEARCH_WEB_SEARCH` |
-| `x_search_enabled` | `GROK_SEARCH_X_SEARCH` |
-| `tavily_api_url` | `TAVILY_API_URL` |
-| `tavily_api_key` | `TAVILY_API_KEY` |
-| `tavily_enabled` | `TAVILY_ENABLED` |
-| `firecrawl_api_url` | `FIRECRAWL_API_URL` |
-| `firecrawl_api_key` | `FIRECRAWL_API_KEY` |
-| `firecrawl_enabled` | `FIRECRAWL_ENABLED` |
-| `default_extra_sources` | `GROK_SEARCH_EXTRA_SOURCES` |
-| `fallback_sources` | `GROK_SEARCH_FALLBACK_SOURCES` |
-| `fetch_max_chars` | `GROK_SEARCH_FETCH_MAX_CHARS` |
-| `cache_size` | `GROK_SEARCH_CACHE_SIZE` |
-| `timeout_seconds` | `GROK_SEARCH_TIMEOUT_SECONDS` |
-| `github_token` | `GITHUB_TOKEN` |
-| `source_max_answers` | `GROK_SEARCH_SOURCE_MAX_ANSWERS` |
-| `source_max_comments` | `GROK_SEARCH_SOURCE_MAX_COMMENTS` |
-| `enrich_concurrency` | `GROK_SEARCH_ENRICH_CONCURRENCY` |
-| `enrich_max_chars` | `GROK_SEARCH_ENRICH_MAX_CHARS` |
-
-Example — minimum useful file:
-
-```toml
-grok_api_key   = "xai-..."
-tavily_api_key = "tvly-..."
-grok_model     = "grok-4-1-fast-reasoning"
-```
-
-Example — OAuth mode:
-
-```toml
-grok_auth_mode = "oauth"
-grok_model     = "grok-4.3"
-```
-
-Example — full reference:
-
-```toml
-grok_api_url          = "https://api.x.ai"
-grok_api_key          = "xai-..."
-grok_auth_mode        = "api_key"
-# grok_auth_file      = "C:\\Users\\chen\\.config\\grok-search-rs\\auth.json"
-grok_model            = "grok-4-1-fast-reasoning"
-web_search_enabled    = true
-x_search_enabled      = false
-tavily_api_url        = "https://api.tavily.com"
-tavily_api_key        = "tvly-..."
-tavily_enabled        = true
-firecrawl_api_url     = "https://api.firecrawl.dev"
-firecrawl_api_key     = "fc-..."
-firecrawl_enabled     = true
-default_extra_sources = 3
-fallback_sources      = 5
-fetch_max_chars       = 200000
-cache_size            = 256
-timeout_seconds       = 60
-```
