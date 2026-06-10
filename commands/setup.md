@@ -1,12 +1,12 @@
 ---
-description: Interactive guided setup for GrokSearch-rs — check binary, configure API keys, scaffold config, verify connectivity
+description: Interactive guided setup for GrokSearch-rs — check binary, configure API keys in .mcp.json, verify connectivity
 argument-hint: "[--skip-binary-check]"
 allowed-tools: [Bash, Read, Write]
 ---
 
 # GrokSearch-rs Setup
 
-Guide the user through setting up GrokSearch-rs for the first time. This command handles binary installation check, API key configuration, config file scaffolding, and connectivity verification.
+Guide the user through setting up GrokSearch-rs for the first time. This command handles binary installation check, API key configuration, and connectivity verification. All configuration goes in `.mcp.json` — there is no separate config file to scaffold.
 
 ## Arguments
 
@@ -89,18 +89,13 @@ Explain the key requirements:
 > ```
 > Then set `GROK_SEARCH_AUTH_MODE=oauth` in `.mcp.json` instead of `GROK_SEARCH_API_KEY`.
 
-### Step 4: Verify Config
+### Step 4: Verify .mcp.json
 
-Check that the env vars are visible to the current shell:
+Check that the `.mcp.json` file has the required keys filled in. Read it and verify `GROK_SEARCH_API_KEY` and `TAVILY_API_KEY` are not empty strings. Don't show the actual values — just confirm they're set.
 
-```bash
-echo "GROK_SEARCH_API_KEY is ${GROK_SEARCH_API_KEY:+set} ${GROK_SEARCH_API_KEY:-unset}"
-echo "TAVILY_API_KEY is ${TAVILY_API_KEY:+set} ${TAVILY_API_KEY:-unset}"
-```
+If any required key is missing or empty, go back to Step 3 and help the user fill them in.
 
-If any required key is missing, go back to Step 3.
-
-> **Note:** For users who use multiple MCP clients, copy the `env` block from `.mcp.json` into each client's MCP server config. The binary always reads env vars the same way regardless of which client launched it.
+> **Note:** The `.mcp.json` file is the only config file. If you use multiple MCP clients, copy the `env` block into each client's MCP server config. No shell env vars or other files needed.
 
 ### Step 5: Verify
 
