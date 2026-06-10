@@ -180,8 +180,8 @@ One-line install (Claude Code)
     }
 
     guide.push_str(
-        r#"Docs:    https://github.com/Episkey-G/GrokSearch-rs#readme
-Issues:  https://github.com/Episkey-G/GrokSearch-rs/issues
+        r#"Docs:    https://github.com/CrystalEchoJ/GrokSearch-rs#readme
+Issues:  https://github.com/CrystalEchoJ/GrokSearch-rs/issues
 "#,
     );
 

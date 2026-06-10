@@ -8,7 +8,7 @@ use url::Url;
 use crate::error::{GrokSearchError, Result};
 use crate::sources::{get_text, SourceCaps, SourceExtractor, SourceType};
 
-const UA: &str = "grok-search-rs/0.1 (https://github.com/Episkey-G/GrokSearch-rs)";
+const UA: &str = "grok-search-rs/0.1 (https://github.com/CrystalEchoJ/GrokSearch-rs)";
 
 #[derive(Debug, Clone)]
 pub struct ArxivRaw {
@@ -34,9 +34,6 @@ fn extract_id(url: &Url) -> Option<String> {
     for prefix in ["/abs/", "/pdf/"] {
         if let Some(rest) = path.strip_prefix(prefix) {
             if !rest.is_empty() {
-                // PDF links carry a `.pdf` extension the arXiv API rejects in
-                // `id_list`; strip it so `/pdf/<id>.pdf` resolves the same paper
-                // as `/abs/<id>`.
                 return Some(rest.strip_suffix(".pdf").unwrap_or(rest).to_string());
             }
         }
@@ -45,10 +42,6 @@ fn extract_id(url: &Url) -> Option<String> {
 }
 
 impl ArxivExtractor {
-    /// D-11: parse an arXiv Atom feed with quick-xml. `<category>`/`<link>` are
-    /// self-closing (Event::Empty). Text fields are collected only while inside
-    /// `<entry>` so the feed-level `<title>` is ignored. quick-xml does not
-    /// resolve external entities or load DTDs → no billion-laughs / XXE risk.
     pub fn parse_atom(xml: &str) -> Result<ArxivRaw> {
         #[derive(PartialEq)]
         enum Field {
@@ -204,7 +197,6 @@ mod tests {
 
     #[test]
     fn extract_id_strips_pdf_suffix() {
-        // arXiv PDF links carry a .pdf extension the API rejects in id_list.
         let url = Url::parse("https://arxiv.org/pdf/1706.03762.pdf").unwrap();
         assert_eq!(extract_id(&url).as_deref(), Some("1706.03762"));
     }

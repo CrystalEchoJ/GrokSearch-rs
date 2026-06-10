@@ -23,6 +23,26 @@
 
 ## Install
 
+### Claude Code Plugin (easiest for Claude Code users)
+
+Add the marketplace, then install the plugin — the full flow takes under a minute:
+
+```
+/plugin marketplace add CrystalEchoJ/GrokSearch-rs
+/plugin install grok-search-rs
+/reload-plugins
+/grok-search-rs:setup
+```
+
+The `setup` command checks your binary, helps with API keys, and verifies everything works. The plugin also includes:
+- `/grok-search-rs:doctor` — connectivity health check
+- `/grok-search-rs:setup` — guided onboarding (re-run anytime)
+- Auto-activating skill that teaches the AI when to use each search tool
+
+> **Note:** The plugin configures the MCP server entry and provides tool guidance, but the `grok-search-rs` Rust binary must still be installed on your system. The `setup` command will check this and help you install it if needed.
+
+### npm (any MCP client)
+
 ```bash
 npm install -g grok-search-rs
 ```
@@ -207,7 +227,7 @@ Tired of duplicating `env` blocks across clients? Run `grok-search-rs --init` on
 ## Build from source
 
 ```bash
-git clone https://github.com/Episkey-G/GrokSearch-rs.git
+git clone https://github.com/CrystalEchoJ/GrokSearch-rs.git
 cd GrokSearch-rs
 cargo build --release
 ```
@@ -234,8 +254,8 @@ More docs:
 
 ## ⭐ Star History
 
-<a href="https://www.star-history.com/?repos=Episkey-G%2FGrokSearch-rs&type=Date">
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Episkey-G/GrokSearch-rs&type=Date" />
+<a href="https://www.star-history.com/?repos=CrystalEchoJ%2FGrokSearch-rs&type=Date">
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=CrystalEchoJ/GrokSearch-rs&type=Date" />
 </a>
 
 ---
