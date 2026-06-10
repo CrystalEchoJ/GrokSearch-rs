@@ -91,11 +91,13 @@ Explain the key requirements:
 
 ### Step 4: Verify .mcp.json
 
-Check that the `.mcp.json` file has the required keys filled in. Read it and verify `GROK_SEARCH_API_KEY` and `TAVILY_API_KEY` are not empty strings. Don't show the actual values — just confirm they're set.
+Read the plugin's `.mcp.json` at `${CLAUDE_PLUGIN_ROOT}/.mcp.json`. Verify `GROK_SEARCH_API_KEY` and `TAVILY_API_KEY` in the `env` block are filled in (not empty strings). Don't show the values — just confirm they're set.
+
+**IMPORTANT — only read `${CLAUDE_PLUGIN_ROOT}/.mcp.json`.** Do NOT read `~/.mcp.json`, `~/.config/grok-search-rs/auth.json`, or any other file. The plugin's `.mcp.json` is the only config file.
 
 If any required key is missing or empty, go back to Step 3 and help the user fill them in.
 
-> **Note:** The `.mcp.json` file is the only config file. If you use multiple MCP clients, copy the `env` block into each client's MCP server config. No shell env vars or other files needed.
+> **Note:** The plugin's `.mcp.json` is the only config file. If you use multiple MCP clients, copy the `env` block into each client's MCP server config. No shell env vars or other files needed.
 
 ### Step 5: Verify
 

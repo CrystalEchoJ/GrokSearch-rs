@@ -1,6 +1,6 @@
 {
   "name": "grok-search-rs",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "AI-powered web search with cited sources via stdio MCP. Connects to Grok/xAI or any OpenAI-compatible API, with Tavily/Firecrawl source retrieval and specialist extractors for GitHub, StackExchange, arXiv, and Wikipedia.",
   "author": {
     "name": "CrystalEchoJ",
